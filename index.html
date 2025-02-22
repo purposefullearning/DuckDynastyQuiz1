@@ -8,6 +8,10 @@
         p { font-size: 16px; margin: 10px 0; }
         input { margin-right: 10px; }
         #result { font-weight: bold; margin-top: 20px; }
+        #missed { color: #ff4500; }
+        #leaderboard { margin-top: 20px; }
+        .correct { color: green; }
+        .wrong { color: red; }
     </style>
 </head>
 <body>
@@ -97,18 +101,54 @@
         <input type="radio" name="q13" value="C"> C. Singing a Song<br>
         <input type="radio" name="q13" value="D"> D. Telling Jokes<br>
 
-        <br><input type="button" value="Submit" onclick="calculateScore()">
+        <br>
+        <input type="text" id="playerName" placeholder="Enter your name" required>
+        <input type="button" value="Submit" onclick="calculateScore()">
+        <input type="button" value="Try Again" onclick="resetQuiz()">
     </form>
-    <p id="result"></p>
+    <div id="result"></div>
+    <div id="missed"></div>
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <ul id="leaderboardList"></ul>
+    </div>
 
     <script>
     const answers = ["A", "C", "B", "B", "B", "C", "B", "B", "B", "C", "A", "A", "B", "B"];
+    const questions = [
+        "What is the name of the family business featured in Duck Dynasty?",
+        "Which Robertson family member is known for his wild stories and iced tea obsession?",
+        "In what state does the Robertson family live?",
+        "What ZZ Top song is used as the theme for Duck Dynasty?",
+        "What did Phil Robertson invent that started the Duck Commander empire?",
+        "Which brother is the CEO of Duck Commander?",
+        "What does Uncle Si call almost everyone he meets?",
+        "What sport did Phil Robertson play in college before turning down an NFL career?",
+        "What unusual item did Si win in a raffle at the donut shop?",
+        "Which family member released a cookbook called 'Miss Kay’s Duck Commander Kitchen'?",
+        "What did Willie accidentally hit Korie with while training for a family football game?",
+        "What did the Duck Commander employees build to celebrate the company’s 40th anniversary?",
+        "Which country did Willie take the family to after landing a client for duck calls?",
+        "What does the show typically end with the family doing?"
+    ];
+    let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
 
     function calculateScore() {
         let score = 0;
+        let missed = [];
         for (let i = 0; i < 14; i++) {
             const selected = document.querySelector(`input[name="q${i}"]:checked`);
-            if (selected && selected.value === answers[i]) score++;
+            if (selected) {
+                if (selected.value === answers[i]) {
+                    score++;
+                } else {
+                    missed.push({
+                        question: questions[i],
+                        yourAnswer: selected.value,
+                        correctAnswer: answers[i]
+                    });
+                }
+            }
         }
         const percentage = (score / 14) * 100;
         let message = `Score: ${score}/14 (${percentage.toFixed(2)}%) - Share with #DuckDynastyQuiz on X!`;
@@ -117,7 +157,47 @@
         else if (percentage >= 50) message += " Not bad, partner!";
         else message += " Time to rewatch, buddy!";
         document.getElementById("result").innerHTML = message;
+
+        // Show missed questions
+        let missedHtml = "<h3>Missed Questions:</h3>";
+        if (missed.length > 0) {
+            missed.forEach(m => {
+                missedHtml += `<p><span class="wrong">Q: ${m.question}</span><br>Your answer: ${m.yourAnswer} | Correct: ${m.correctAnswer}</p>`;
+            });
+        } else {
+            missedHtml += "<p class='correct'>None! You got them all right!</p>";
+        }
+        document.getElementById("missed").innerHTML = missedHtml;
+
+        // Update leaderboard
+        const name = document.getElementById("playerName").value.trim();
+        if (name) {
+            leaderboard.push({ name, score });
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 5); // Top 5 only
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+            updateLeaderboard();
+        }
     }
+
+    function resetQuiz() {
+        document.getElementById("quizForm").reset();
+        document.getElementById("result").innerHTML = "";
+        document.getElementById("missed").innerHTML = "";
+    }
+
+    function updateLeaderboard() {
+        const list = document.getElementById("leaderboardList");
+        list.innerHTML = "";
+        leaderboard.forEach(entry => {
+            const li = document.createElement("li");
+            li.textContent = `${entry.name}: ${entry.score}/14`;
+            list.appendChild(li);
+        });
+    }
+
+    // Load leaderboard on page load
+    window.onload = updateLeaderboard;
     </script>
 </body>
 </html>
