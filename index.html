@@ -13,6 +13,9 @@
         .correct { color: green; }
         .wrong { color: red; }
     </style>
+    <!-- Firebase SDK (non-module, standard script tags) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
 </head>
 <body>
     <h1>Duck Dynasty Quiz</h1>
@@ -109,11 +112,26 @@
     <div id="result"></div>
     <div id="missed"></div>
     <div id="leaderboard">
-        <h2>Leaderboard</h2>
+        <h2>Global Leaderboard</h2>
         <ul id="leaderboardList"></ul>
     </div>
 
     <script>
+    // Insert your firebaseConfig here!
+    const firebaseConfig = {
+        apiKey: "AIzaSyA3VYfYO-MIqPt3tEtIzaleLhxfNzGsQ4o",
+        authDomain: "duckdynastyquiz.firebaseapp.com",
+        projectId: "duckdynastyquiz",
+        storageBucket: "duckdynastyquiz.firebasestorage.app",
+        messagingSenderId: "60380424217",
+        appId: "1:60380424217:web:e6ea55c734a4f81907e288",
+        measurementId: "G-1P9SPRKC5K"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const answers = ["A", "C", "B", "B", "B", "C", "B", "B", "B", "C", "A", "A", "B", "B"];
     const questions = [
         "What is the name of the family business featured in Duck Dynasty?",
@@ -131,7 +149,6 @@
         "Which country did Willie take the family to after landing a client for duck calls?",
         "What does the show typically end with the family doing?"
     ];
-    let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
 
     function calculateScore() {
         let score = 0;
@@ -151,11 +168,12 @@
             }
         }
         const percentage = (score / 14) * 100;
-        let message = `Score: ${score}/14 (${percentage.toFixed(2)}%) - Share with #DuckDynastyQuiz on X!`;
+        let message = `Score: ${score}/14 (${percentage.toFixed(2)}%) - Share with #DuckDynastyQuiz!`;
         if (percentage === 100) message += " Perfect score, Jack!";
         else if (percentage >= 80) message += " Hot dang, you’re a pro!";
         else if (percentage >= 50) message += " Not bad, partner!";
         else message += " Time to rewatch, buddy!";
+        message += ` <a href="https://www.facebook.com/sharer/sharer.php?u=https://tvbuzznow.com/duck-dynasty-quiz-1/"e=I scored ${score}/14 on the Duck Dynasty Quiz! Beat me, Jack!" target="_blank">Share on Facebook</a>`;
         document.getElementById("result").innerHTML = message;
 
         // Show missed questions
@@ -169,14 +187,14 @@
         }
         document.getElementById("missed").innerHTML = missedHtml;
 
-        // Update leaderboard
+        // Update global leaderboard
         const name = document.getElementById("playerName").value.trim();
         if (name) {
-            leaderboard.push({ name, score });
-            leaderboard.sort((a, b) => b.score - a.score);
-            leaderboard = leaderboard.slice(0, 5); // Top 5 only
-            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
-            updateLeaderboard();
+            db.collection("leaderboard").add({
+                name: name,
+                score: score,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => updateLeaderboard());
         }
     }
 
@@ -187,13 +205,20 @@
     }
 
     function updateLeaderboard() {
-        const list = document.getElementById("leaderboardList");
-        list.innerHTML = "";
-        leaderboard.forEach(entry => {
-            const li = document.createElement("li");
-            li.textContent = `${entry.name}: ${entry.score}/14`;
-            list.appendChild(li);
-        });
+        db.collection("leaderboard")
+          .orderBy("score", "desc")
+          .limit(5)
+          .get()
+          .then((querySnapshot) => {
+              const list = document.getElementById("leaderboardList");
+              list.innerHTML = "";
+              querySnapshot.forEach((doc) => {
+                  const data = doc.data();
+                  const li = document.createElement("li");
+                  li.textContent = `${data.name}: ${data.score}/14`;
+                  list.appendChild(li);
+              });
+          });
     }
 
     // Load leaderboard on page load
