@@ -166,6 +166,13 @@
                         correctAnswer: answers[i]
                     });
                 }
+            } else {
+                // Treat unanswered questions as misses
+                missed.push({
+                    question: questions[i],
+                    yourAnswer: "Unanswered",
+                    correctAnswer: answers[i]
+                });
             }
         }
         const percentage = (score / 14) * 100;
@@ -182,7 +189,7 @@
         message += ` <a href="https://www.facebook.com/sharer/sharer.php?u=https://tvbuzznow.com/duck-dynasty-quiz-1/&e=I scored ${score}/14 on the Duck Dynasty Quiz! Beat me, Jack!" target="_blank">Share on Facebook</a>`;
         document.getElementById("result").innerHTML = message;
 
-        // Show missed questions
+        // Show missed questions (including unanswered ones)
         let missedHtml = "<h3>Missed Questions:</h3>";
         if (missed.length > 0) {
             missed.forEach(m => {
